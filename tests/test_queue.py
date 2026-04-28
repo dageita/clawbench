@@ -16,6 +16,85 @@ def test_submission_request_defaults_to_single_parallel_lane():
     request = SubmissionRequest(model="openai-codex/gpt-5.4")
 
     assert request.max_parallel_lanes == 1
+    assert request.runs_per_task == 3
+
+
+@pytest.mark.asyncio
+async def test_submit_dedupes_equivalent_active_jobs(monkeypatch):
+    queue = JobQueue()
+    request = SubmissionRequest(model="anthropic/claude-sonnet-4-6", submitter="vincent")
+    queue._jobs = {
+        "job-1": Job(
+            job_id="job-1",
+            status=JobStatus.PENDING,
+            submitted_at="2026-04-09T00:00:01+00:00",
+            request=request,
+        )
+    }
+    monkeypatch.setattr(queue, "_save_local", lambda: (_ for _ in ()).throw(AssertionError("should not save")))
+
+    async def fail_sync() -> None:
+        raise AssertionError("should not sync")
+
+    monkeypatch.setattr(queue, "_sync_to_hub", fail_sync)
+
+    job = await queue.submit(SubmissionRequest(model="anthropic/claude-sonnet-4-6", submitter="someone-else"))
+
+    assert job.job_id == "job-1"
+
+
+@pytest.mark.asyncio
+async def test_submit_enforces_queue_capacity(monkeypatch):
+    monkeypatch.setenv("CLAWBENCH_MAX_ACTIVE_QUEUE_JOBS", "1")
+    queue = JobQueue()
+    queue._jobs = {
+        "job-1": Job(
+            job_id="job-1",
+            status=JobStatus.EVALUATING,
+            submitted_at="2026-04-09T00:00:01+00:00",
+            request=SubmissionRequest(model="anthropic/claude-sonnet-4-6"),
+        )
+    }
+
+    with pytest.raises(ValueError, match="Queue is at capacity"):
+        await queue.submit(SubmissionRequest(model="huggingface/Qwen/Qwen3-32B"))
+
+
+@pytest.mark.asyncio
+async def test_submit_enforces_submitter_limit(monkeypatch):
+    monkeypatch.setenv("CLAWBENCH_MAX_ACTIVE_JOBS_PER_SUBMITTER", "1")
+    queue = JobQueue()
+    queue._jobs = {
+        "job-1": Job(
+            job_id="job-1",
+            status=JobStatus.PENDING,
+            submitted_at="2026-04-09T00:00:01+00:00",
+            request=SubmissionRequest(model="anthropic/claude-sonnet-4-6", submitter="Vincent"),
+        )
+    }
+
+    with pytest.raises(ValueError, match="already has 1 active"):
+        await queue.submit(SubmissionRequest(model="huggingface/Qwen/Qwen3-32B", submitter=" vincent "))
+
+
+@pytest.mark.asyncio
+async def test_submit_enforces_per_submission_runtime_caps(monkeypatch):
+    monkeypatch.setenv("CLAWBENCH_MAX_RUNS_PER_SUBMISSION", "2")
+    monkeypatch.setenv("CLAWBENCH_MAX_LANES_PER_SUBMISSION", "1")
+    queue = JobQueue()
+    queue._jobs = {}
+
+    with pytest.raises(ValueError, match="runs_per_task=3"):
+        await queue.submit(SubmissionRequest(model="anthropic/claude-sonnet-4-6", runs_per_task=3))
+
+    with pytest.raises(ValueError, match="max_parallel_lanes=2"):
+        await queue.submit(
+            SubmissionRequest(
+                model="anthropic/claude-sonnet-4-6",
+                runs_per_task=2,
+                max_parallel_lanes=2,
+            )
+        )
 
 
 def test_resolve_dataset_repo_prefers_explicit_env(monkeypatch):

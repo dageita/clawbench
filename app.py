@@ -58,8 +58,11 @@ def _env_int(name: str, default: int, *, minimum: int, maximum: int) -> int:
     return max(minimum, min(maximum, value))
 
 
-DEFAULT_RUNS_PER_TASK = _env_int("CLAWBENCH_DEFAULT_RUNS_PER_TASK", 3, minimum=1, maximum=10)
-DEFAULT_PARALLEL_LANES = _env_int("CLAWBENCH_DEFAULT_PARALLEL_LANES", 1, minimum=1, maximum=4)
+MAX_RUNS_PER_SUBMISSION = _env_int("CLAWBENCH_MAX_RUNS_PER_SUBMISSION", 3, minimum=1, maximum=10)
+MAX_LANES_PER_SUBMISSION = _env_int("CLAWBENCH_MAX_LANES_PER_SUBMISSION", 4, minimum=1, maximum=8)
+DEFAULT_RUNS_PER_TASK = _env_int("CLAWBENCH_DEFAULT_RUNS_PER_TASK", 3, minimum=1, maximum=MAX_RUNS_PER_SUBMISSION)
+DEFAULT_PARALLEL_LANES = _env_int("CLAWBENCH_DEFAULT_PARALLEL_LANES", 1, minimum=1, maximum=MAX_LANES_PER_SUBMISSION)
+ENABLE_BULK_SUBMIT = os.environ.get("CLAWBENCH_ENABLE_BULK_SUBMIT", "").strip().lower() in {"1", "true", "yes", "on"}
 
 # ---------------------------------------------------------------------------
 # Background worker (starts in a thread)
@@ -144,29 +147,9 @@ def load_leaderboard() -> pd.DataFrame:
 
 
 def _flatten_result(data: dict) -> dict:
-    tasks = data.get("task_results", [])
+    tasks = _parse_json_field(data.get("task_results", []), expected_type=list, default=[])
     n_tasks = len(tasks) if isinstance(tasks, list) else 0
-    # `environment` is serialized as `str(result.environment)` by upload.py
-    # when pushed to the HF Dataset, so rows coming back from the dataset
-    # have a string here instead of the nested dict the local JSON files use.
-    # Normalize both shapes into a dict so `.get()` calls below don't explode.
-    raw_env = data.get("environment", {})
-    if isinstance(raw_env, dict):
-        environment = raw_env
-    elif isinstance(raw_env, str) and raw_env.strip():
-        # Best-effort parse of a stringified dict or JSON object.
-        try:
-            parsed = json.loads(raw_env)
-            environment = parsed if isinstance(parsed, dict) else {}
-        except (ValueError, TypeError):
-            try:
-                import ast
-                parsed = ast.literal_eval(raw_env)
-                environment = parsed if isinstance(parsed, dict) else {}
-            except (ValueError, SyntaxError):
-                environment = {}
-    else:
-        environment = {}
+    environment = _parse_json_field(data.get("environment", {}), expected_type=dict, default={})
     return {
         "Model": data.get("model", ""),
         "Judge Model": data.get("judge_model", environment.get("judge_model", "")) or "-",
@@ -188,6 +171,22 @@ def _flatten_result(data: dict) -> dict:
         "Tasks": n_tasks,
         "Timestamp": data.get("timestamp", "")[:16],
     }
+
+
+def _parse_json_field(value, *, expected_type, default):
+    if isinstance(value, expected_type):
+        return value
+    if isinstance(value, str) and value.strip():
+        try:
+            parsed = json.loads(value)
+        except (ValueError, TypeError):
+            try:
+                import ast
+                parsed = ast.literal_eval(value)
+            except (ValueError, SyntaxError):
+                return default
+        return parsed if isinstance(parsed, expected_type) else default
+    return default
 
 
 def load_queue() -> pd.DataFrame:
@@ -272,8 +271,11 @@ def submit_model(
         prompt_variant=prompt_variant,
         submitter=submitter.strip(),
     )
-    job = asyncio.run(queue.submit(request))
-    return f"Submitted [{model_id}]! Job ID: {job.job_id}. Check the Queue tab."
+    try:
+        job = asyncio.run(queue.submit(request))
+    except ValueError as exc:
+        return f"Submission blocked: {exc}"
+    return f"Queued [{model_id}]. Job ID: {job.job_id}. Check the Queue tab."
 
 
 def submit_all_presets(
@@ -287,6 +289,12 @@ def submit_all_presets(
     submitter: str,
 ) -> str:
     """Submit all preset models from the selected audience track."""
+    if not ENABLE_BULK_SUBMIT:
+        return (
+            "Bulk preset submission is disabled for this deployment. "
+            "Set CLAWBENCH_ENABLE_BULK_SUBMIT=1 to enable it for maintainer runs."
+        )
+
     selected_tier = tier if tier != "all" else None
     selected_scenario = scenario if scenario != "all" else None
     preset_specs = build_preset_submission_specs(
@@ -303,13 +311,21 @@ def submit_all_presets(
         return f"No presets configured for {preset_audience}."
 
     submitted = []
+    blocked = []
     for preset, request_kwargs in preset_specs:
         request = SubmissionRequest(**request_kwargs)
-        job = asyncio.run(queue.submit(request))
+        try:
+            job = asyncio.run(queue.submit(request))
+        except ValueError as exc:
+            blocked.append(f"{preset.label}: {exc}")
+            continue
         submitted.append(f"{preset.label} ({job.job_id})")
-    return f"Submitted {len(submitted)} models from {preset_audience}:\n" + "\n".join(
+    message = f"Queued {len(submitted)} models from {preset_audience}:\n" + "\n".join(
         f"  - {item}" for item in submitted
     )
+    if blocked:
+        message += "\n\nBlocked:\n" + "\n".join(f"  - {item}" for item in blocked)
+    return message
 
 
 def update_preset_choices(preset_audience: str):
@@ -1036,12 +1052,12 @@ with gr.Blocks(title="ClawBench", theme=clawbench_theme, css=CUSTOM_CSS) as demo
         )
         with gr.Row():
             runs_input = gr.Slider(
-                minimum=1, maximum=10, value=DEFAULT_RUNS_PER_TASK, step=1,
+                minimum=1, maximum=MAX_RUNS_PER_SUBMISSION, value=DEFAULT_RUNS_PER_TASK, step=1,
                 label="Runs per task (higher = more reliable pass^k)",
             )
             max_parallel_lanes_input = gr.Slider(
                 minimum=1,
-                maximum=4,
+                maximum=MAX_LANES_PER_SUBMISSION,
                 value=DEFAULT_PARALLEL_LANES,
                 step=1,
                 label="Parallel lanes (browser tasks stay serialized on one lane)",
@@ -1081,7 +1097,7 @@ with gr.Blocks(title="ClawBench", theme=clawbench_theme, css=CUSTOM_CSS) as demo
         )
         with gr.Row():
             submit_btn = gr.Button("Submit Model", variant="primary")
-            submit_all_btn = gr.Button("Submit All Presets", variant="secondary")
+            submit_all_btn = gr.Button("Submit All Presets", variant="secondary", interactive=ENABLE_BULK_SUBMIT)
         submit_output = gr.Textbox(label="Status", interactive=False, lines=5, elem_classes=["output-textbox"])
         submit_btn.click(
             fn=submit_model,
@@ -1212,7 +1228,7 @@ Current formula:
 - reported as a sidecar signal and does not change the official deterministic leaderboard score
 
 ### Task Design
-- 20 tasks across 5 tiers
+- 19 tasks across 5 tiers
 - deterministic local services for browser tasks
 - multi-file assets with real bugs, missing tests, and migration work
 - scripted user turns and optional multi-phase fresh-session tasks
@@ -1220,19 +1236,19 @@ Current formula:
 ### Coverage snapshot
 ```text
 Tier mix
-tier1 | ###   3
-tier2 | ##### 5
-tier3 | ##### 5
-tier4 | ####  4
-tier5 | ###   3
+tier1 | ##     2
+tier2 | ###### 6
+tier3 | #####  5
+tier4 | #####  5
+tier5 | #      1
 
 Family mix
-repo        | ###### 6
-coding      | ####   4
-multi_tool  | ###    3
-adversarial | ###    3
-browser     | ##     2
-tools       | ##     2
+tools       | ######## 8
+repo        | ###      3
+coding      | ##       2
+multi_tool  | ###      3
+browser     | ##       2
+adversarial | #        1
 ```
 
 ### pass^k: Production Reliability

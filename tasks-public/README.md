@@ -57,11 +57,12 @@ tasks-public/
 docker build -t clawbench .
 ```
 
-The repo `Dockerfile` tracks `ghcr.io/openclaw/openclaw:latest` so the
-benchmark always builds against the current OpenClaw release. Note
-that platform upgrades can shift scores (we observed +0.13 to +0.29
-per model going from 4.9 → 4.15-beta.1) — when comparing two model
-runs, build them against the same OpenClaw release.
+The repo `Dockerfile` pins an OpenClaw image digest so public Space
+builds do not silently drift. Override `OPENCLAW_IMAGE` only when you
+intend to measure a different platform build. Note that platform
+upgrades can shift scores (we observed +0.13 to +0.29 per model going
+from 4.9 → 4.15-beta.1) — when comparing two model runs, build them
+against the same OpenClaw release.
 
 ## How to run Core v1
 

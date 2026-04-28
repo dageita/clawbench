@@ -19,7 +19,7 @@ license: mit
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
 [![Core v1: 19 tasks](https://img.shields.io/badge/Core%20v1-19%20tasks-blue.svg?style=flat-square)](tasks-public/)
 [![Diagnostics](https://img.shields.io/badge/diagnostics-dynamical-blueviolet.svg?style=flat-square)](#3-dynamical-systems-diagnostics-how-agents-fail-not-just-whether)
-[![HF Dataset](https://img.shields.io/badge/HF-dataset-yellow.svg?style=flat-square)](https://huggingface.co/datasets/ScoootScooob/clawbench-results)
+[![HF Dataset](https://img.shields.io/badge/HF-dataset-yellow.svg?style=flat-square)](https://huggingface.co/datasets/openclaw/clawbench-results)
 
 </div>
 
@@ -351,7 +351,7 @@ populations.
 ### Build the image
 
 ```bash
-git clone git@github.com:scoootscooob/clawbench.git && cd clawbench
+git clone git@github.com:openclaw/clawbench.git && cd clawbench
 docker build -t clawbench .
 
 # Record the OpenClaw version baked in (for reproducibility):
@@ -521,7 +521,7 @@ clawbench/
 │
 ├── profiles/                       # v0.5 plugin profile YAMLs
 ├── tests/                          # Test suite
-├── Dockerfile                      # Layered on ghcr.io/openclaw/openclaw:latest
+├── Dockerfile                      # Layered on a pinned ghcr.io/openclaw/openclaw image
 ├── CLAWBENCH_V0_4_SPEC.md          # Full specification
 └── PARTNER_TRACE_SPEC.md           # Trace interchange format
 ```
@@ -588,7 +588,7 @@ MIT. See `LICENSE`.
   title  = {ClawBench: Trace-Scored Agent Benchmark with Dynamical-Systems Diagnostics},
   author = {ScoootScooob},
   year   = {2026},
-  url    = {https://github.com/scoootscooob/clawbench}
+  url    = {https://github.com/openclaw/clawbench}
 }
 ```
 
@@ -598,6 +598,6 @@ MIT. See `LICENSE`.
 
 **ClawBench** — Rigorous. Reproducible. Dynamical.
 
-[Dataset](https://huggingface.co/datasets/ScoootScooob/clawbench-results) · [Space](https://huggingface.co/spaces/ScoootScooob/clawbench) · [Core v1](tasks-public/) · [Spec](CLAWBENCH_V0_4_SPEC.md)
+[Dataset](https://huggingface.co/datasets/openclaw/clawbench-results) · [Space](https://huggingface.co/spaces/openclaw/clawbench) · [Core v1](tasks-public/) · [Spec](CLAWBENCH_V0_4_SPEC.md)
 
 </div>

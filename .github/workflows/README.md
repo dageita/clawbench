@@ -8,13 +8,15 @@ Runs the repository test suite automatically on:
 - every `pull_request`
 - manual dispatch from the Actions tab
 
-It uses Python 3.12, installs the package with `pip install -e .`, then
-runs `python -m pytest -q`.
+It uses Python 3.11 and 3.12, installs the package with
+`pip install -e .`, runs `python -m pytest -q`, then builds a wheel and
+checks that runtime data such as `tasks-public/`, `profiles/`, and
+`baselines/` are included.
 
 ## `sync-to-hf-space.yml` — auto-mirror main to the HF Space
 
 Mirrors every push to `main` into the HF Space git remote so
-[huggingface.co/spaces/ScoootScooob/clawbench](https://huggingface.co/spaces/ScoootScooob/clawbench)
+[huggingface.co/spaces/openclaw/clawbench](https://huggingface.co/spaces/openclaw/clawbench)
 always tracks GitHub `main`. GitHub becomes the single source of truth;
 the HF Space is a pure deploy target.
 
@@ -34,13 +36,13 @@ the repo; you add them via the GitHub UI.
 
 ### 2. Add the secrets to this repo
 
-1. Go to <https://github.com/scoootscooob/clawbench/settings/secrets/actions>
+1. Go to <https://github.com/openclaw/clawbench/settings/secrets/actions>
 2. Click **"New repository secret"** and add each of these:
 
    | Name          | Value                                                      |
    |---------------|------------------------------------------------------------|
    | `HF_TOKEN`    | The write-scoped HF token you created in step 1            |
-   | `HF_USERNAME` | `ScoootScooob` (the owner half of the Space path)          |
+   | `HF_USERNAME` | The Hugging Face username used with the write token        |
 
 3. Save both.
 
@@ -79,7 +81,7 @@ status under the Actions tab for any commit.
 If you ever mirror to a different Space (e.g. a staging copy), set a
 repository variable (not a secret) named `HF_SPACE_ID` to the new
 Space ID, for example `yourname/clawbench-staging`. The workflow
-defaults to `ScoootScooob/clawbench` when the variable is unset.
+defaults to `openclaw/clawbench` when the variable is unset.
 
 ## Why `--force`?
 

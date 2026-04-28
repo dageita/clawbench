@@ -1,19 +1,17 @@
 name: Sync main to HF Space
 
 # Mirrors every push to `main` on GitHub into the HF Space git remote so
-# that the public ClawBench Space (https://huggingface.co/spaces/ScoootScooob/clawbench)
+# that the public ClawBench Space (https://huggingface.co/spaces/openclaw/clawbench)
 # always tracks the source-of-truth repo.
 #
 # Required repository secrets (Settings -> Secrets and variables -> Actions):
 #   HF_TOKEN     Hugging Face access token with write permission to the Space.
 #                Create at https://huggingface.co/settings/tokens
 #                (token type "Write" is sufficient; no organization scope needed).
-#   HF_USERNAME  Your Hugging Face username, e.g. "ScoootScooob".
-#                (The Space is `ScoootScooob/clawbench`, so the username is
-#                the owner half of that path.)
+#   HF_USERNAME  The Hugging Face username used with the write token.
 #
 # Optional: set HF_SPACE_ID as a repo variable (not secret) to point the
-# workflow at a different Space; defaults to "ScoootScooob/clawbench".
+# workflow at a different Space; defaults to "openclaw/clawbench".
 
 on:
   push:
@@ -55,7 +53,7 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_USERNAME: ${{ secrets.HF_USERNAME }}
-          HF_SPACE_ID: ${{ vars.HF_SPACE_ID || 'ScoootScooob/clawbench' }}
+          HF_SPACE_ID: ${{ vars.HF_SPACE_ID || 'openclaw/clawbench' }}
         run: |
           set -euo pipefail
           # Authenticate via token in the URL. HF Spaces accept the
@@ -83,6 +81,6 @@ jobs:
         run: |
           echo "### HF Space mirror" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Pushed \`$(git rev-parse --short HEAD)\` to \`ScoootScooob/clawbench\` Space." >> "$GITHUB_STEP_SUMMARY"
+          echo "Pushed \`$(git rev-parse --short HEAD)\` to \`${{ vars.HF_SPACE_ID || 'openclaw/clawbench' }}\` Space." >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "View the Space: <https://huggingface.co/spaces/ScoootScooob/clawbench>" >> "$GITHUB_STEP_SUMMARY"
+          echo "View the Space: <https://huggingface.co/spaces/${{ vars.HF_SPACE_ID || 'openclaw/clawbench' }}>" >> "$GITHUB_STEP_SUMMARY"

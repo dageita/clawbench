@@ -40,7 +40,7 @@ RUN mkdir -p \
     /home/node/.openclaw/agents/dev \
     /home/node/.openclaw/agents/main/agent && \
     chown -R node:node /data /home/node/.openclaw && \
-    chmod -R 777 /data /home/node/.openclaw
+    chmod -R 775 /data /home/node/.openclaw
 
 USER node
 

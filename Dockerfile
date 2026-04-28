@@ -1,7 +1,8 @@
 # ClawBench HF Docker Space
-# Layer the benchmark harness on top of the official OpenClaw image.
+# Layer the benchmark harness on top of a pinned OpenClaw image.
 
-FROM ghcr.io/openclaw/openclaw:latest
+ARG OPENCLAW_IMAGE=ghcr.io/openclaw/openclaw@sha256:2e32f4f2e4f653f12d5dc6e5c93cc71e60f49d1dfaf061b18e53c3e61a38fb48
+FROM ${OPENCLAW_IMAGE}
 
 USER root
 
@@ -36,7 +37,7 @@ RUN mkdir -p \
     /home/node/.openclaw/agents/dev \
     /home/node/.openclaw/agents/main/agent && \
     chown -R node:node /data /home/node/.openclaw && \
-    chmod -R 777 /data /home/node/.openclaw
+    chmod -R 775 /data /home/node/.openclaw
 
 USER node
 
