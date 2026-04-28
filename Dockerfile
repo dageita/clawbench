@@ -22,7 +22,7 @@ RUN npx -y playwright@1.59.1 install --with-deps chromium && \
 ENV HOME=/home/node PATH=/home/node/.local/bin:$PATH
 WORKDIR /home/node/app
 
-COPY --chown=node:node pyproject.toml README.md ./
+COPY --chown=node:node pyproject.toml README.md CLAWBENCH_V0_4_SPEC.md ./
 COPY --chown=node:node clawbench/ clawbench/
 COPY --chown=node:node tasks-public/ tasks-public/
 COPY --chown=node:node tasks-domain/ tasks-domain/
