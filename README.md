@@ -352,6 +352,7 @@ populations.
 
 ```bash
 git clone git@github.com:openclaw/clawbench.git && cd clawbench
+cp .env.example .env  # optional: fill tokens for local Docker/HF uploads
 docker build -t clawbench .
 
 # Record the OpenClaw version baked in (for reproducibility):

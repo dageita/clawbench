@@ -34,7 +34,10 @@ jobs:
       - name: Install project
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e .
+          python -m pip install -e .[dev]
+
+      - name: Run static lint
+        run: python -m ruff check clawbench app.py scripts tests --select F,E9
 
       - name: Run test suite
         run: python -m pytest -q

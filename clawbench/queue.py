@@ -290,7 +290,7 @@ class JobQueue:
                 job.current_run_index = None
                 job.current_run_total = None
                 job.progress_message = (
-                    f"Auto-requeued after stale evaluation lease"
+                    "Auto-requeued after stale evaluation lease"
                     + (f" ({stale_label})" if stale_label else "")
                 )
                 job.stale_requeues += 1

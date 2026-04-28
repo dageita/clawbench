@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import json
 import re
-from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -109,7 +108,6 @@ def audit_model(label: str, cache_sub: str, pretty: str) -> dict:
     logged = parse_log(log_path)
     archived = scan_archive(cache_dir)
 
-    all_keys = set(logged.keys()) | set(archived.keys())
     n_log = len(logged)
     n_arch = len(archived)
     not_archived = [k for k in logged.keys() if k not in archived]
@@ -144,7 +142,6 @@ def audit_model(label: str, cache_sub: str, pretty: str) -> dict:
     for k in not_archived:
         all_scores.append(logged[k]["score"])
 
-    n_total_attempts = max(n_log, len(all_scores))
     expected = 120
 
     clean_scores = [s for _, s in clean_runs]

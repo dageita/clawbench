@@ -34,7 +34,6 @@ from clawbench.prediction import (
     HistoricalDatabase,
     HistoricalRun,
     attribute_surprise,
-    predict_profile,
 )
 from clawbench.profile import (
     PluginManifest,

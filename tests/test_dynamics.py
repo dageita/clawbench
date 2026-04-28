@@ -2,19 +2,12 @@
 
 from __future__ import annotations
 
-import math
 
 import numpy as np
 import pytest
 
 from clawbench.dynamics import (
-    TOOL_FAMILIES,
-    Dynamics,
     Regime,
-    Sensitivity,
-    SurvivalPoint,
-    StratumStats,
-    StratifiedAssessment,
     _classify_tool,
     _cosine_dist,
     _entropy,
@@ -25,7 +18,6 @@ from clawbench.dynamics import (
     compute_sensitivity,
     find_event_step,
     kaplan_meier,
-    stratify_by_regime,
     stratify_by_tier,
 )
 from clawbench.schemas import (
