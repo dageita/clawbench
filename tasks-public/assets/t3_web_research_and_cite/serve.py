@@ -5,13 +5,23 @@ from __future__ import annotations
 import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).parent / "articles"
+ARTICLES = {path.stem: path for path in ROOT.glob("*.html") if path.is_file()}
+
+
+def article_for_request_path(request_path: str) -> Path | None:
+    path = unquote(urlsplit(request_path).path)
+    if not path.startswith("/article/"):
+        return None
+    slug = path.removeprefix("/article/")
+    return ARTICLES.get(slug)
 
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802
-        path = self.path.split("?")[0]
+        path = unquote(urlsplit(self.path).path)
         if path == "/health":
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -22,9 +32,8 @@ class Handler(BaseHTTPRequestHandler):
             self._index()
             return
         if path.startswith("/article/"):
-            slug = path.split("/", 2)[2]
-            article = ROOT / f"{slug}.html"
-            if article.exists():
+            article = article_for_request_path(self.path)
+            if article is not None:
                 self._html(article.read_bytes())
                 return
         self.send_response(404)
@@ -33,8 +42,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _index(self) -> None:
         items = []
-        for f in sorted(ROOT.glob("*.html")):
-            slug = f.stem
+        for slug in sorted(ARTICLES):
             items.append(f'<li><a href="/article/{slug}">{slug}</a></li>')
         body = (
             "<!doctype html><html><body>"
