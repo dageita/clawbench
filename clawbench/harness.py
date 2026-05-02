@@ -19,6 +19,7 @@ from rich.console import Console
 from rich.table import Table
 
 from clawbench import __version__
+from clawbench.ablation import build_ablation_profile
 from clawbench.client import GatewayClient, GatewayConfig
 from clawbench.releases import compute_task_snapshot_fingerprint, load_active_release
 from clawbench.schemas import (
@@ -86,6 +87,9 @@ class BenchmarkHarness:
         browser_concurrency: int = 1,
         adapter: str = "openclaw",
         judge_affects_score: bool = False,
+        tool_profile_name: str | None = None,
+        enabled_toolsets: list[str] | None = None,
+        disabled_toolsets: list[str] | None = None,
     ) -> None:
         self.gateway_config = gateway_config
         self.model = model
@@ -111,6 +115,9 @@ class BenchmarkHarness:
         self.concurrency = max(1, int(concurrency))
         self.browser_concurrency = max(1, int(browser_concurrency))
         self.adapter = adapter
+        self.tool_profile_name = tool_profile_name
+        self.enabled_toolsets = enabled_toolsets or []
+        self.disabled_toolsets = disabled_toolsets or []
         self.repo_root = Path(__file__).parent.parent
         self.last_task_runs: dict[str, list[TaskRunResult]] = {}
 
@@ -548,6 +555,9 @@ class BenchmarkHarness:
             "prompt_variant": self.prompt_variant,
             "judge_model": self.judge_model,
             "judge_affects_score": self.judge_affects_score,
+            "tool_profile_name": self.tool_profile_name,
+            "enabled_toolsets": self.enabled_toolsets,
+            "disabled_toolsets": self.disabled_toolsets,
             "benchmark_version": __version__,
             "task_fingerprint": _task_definition_fingerprint(task),
         }
@@ -753,6 +763,15 @@ class BenchmarkHarness:
             for _ in range(count)
         )
         active_release = load_active_release()
+        ablation_profile = build_ablation_profile(
+            model=self.model,
+            adapter=self.adapter,
+            prompt_profile=self.prompt_variant,
+            harness_version=__version__,
+            tool_profile_name=self.tool_profile_name,
+            enabled_toolsets=self.enabled_toolsets,
+            disabled_toolsets=self.disabled_toolsets,
+        )
         result = BenchmarkResult(
             submission_id=str(uuid.uuid4()),
             model=self.model,
@@ -770,6 +789,7 @@ class BenchmarkHarness:
                 "judge_model": self.judge_model,
                 "judge_affects_score": self.judge_affects_score,
                 "adapter": self.adapter,
+                "ablation_profile": ablation_profile.model_dump(),
                 "known_adapters": list(KNOWN_ADAPTERS),
                 "executable_adapters": sorted(EXECUTABLE_ADAPTERS),
                 "subsets": self.subsets,
