@@ -35,6 +35,12 @@ STALE_EVALUATION_SECONDS = max(
     int(os.environ.get("CLAWBENCH_STALE_EVALUATION_SECONDS", "1800")),
 )
 OPENCLAW_EVAL_EXEC_HOSTS = {"auto", "gateway", "sandbox", "node"}
+OPENCLAW_EVAL_SYSTEM_PROMPT = (
+    "You are running an OpenClaw benchmark task. Complete the user's request in the current "
+    "workspace using the available tools when needed. For file, code, browser, shell, or memory "
+    "tasks, make the requested changes directly and verify them when practical. Do not ask "
+    "follow-up questions during the benchmark. Keep any final reply brief."
+)
 
 
 @dataclass
@@ -676,6 +682,7 @@ class EvalWorker:
         if self._active_model:
             _set_nested(data, "agents.defaults.model.primary", self._active_model)
             _set_nested(data, "agents.defaults.subagents.model.primary", self._active_model)
+            self._apply_eval_model_defaults(data, self._active_model)
 
         tmp_path = cfg_path.with_suffix(".json.tmp")
         tmp_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
@@ -1128,8 +1135,7 @@ class EvalWorker:
         tmp_path.write_text(json.dumps(approvals, indent=2), encoding="utf-8")
         tmp_path.replace(approvals_path)
 
-    @staticmethod
-    def _patch_openclaw_config(pairs: list[tuple[str, object]]) -> None:
+    def _patch_openclaw_config(self, pairs: list[tuple[str, object]]) -> None:
         state_dir = Path(os.environ.get("OPENCLAW_STATE_DIR") or os.path.expanduser("~/.openclaw"))
         config_path = state_dir / "openclaw.json"
         if not config_path.exists():
@@ -1147,11 +1153,49 @@ class EvalWorker:
             if cursor.get(parts[-1]) != value:
                 cursor[parts[-1]] = value
                 changed = True
+        if self._active_model:
+            changed = self._apply_eval_model_defaults(data, self._active_model) or changed
         if not changed:
             return
         tmp_path = config_path.with_suffix(".json.tmp")
         tmp_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
         tmp_path.replace(config_path)
+
+    @staticmethod
+    def _apply_eval_model_defaults(data: dict, model: str) -> bool:
+        """Force eval model parameters that keep benchmark turns low-latency."""
+        agents = data.setdefault("agents", {})
+        if not isinstance(agents, dict):
+            data["agents"] = agents = {}
+        defaults = agents.setdefault("defaults", {})
+        if not isinstance(defaults, dict):
+            agents["defaults"] = defaults = {}
+        models = defaults.setdefault("models", {})
+        if not isinstance(models, dict):
+            defaults["models"] = models = {}
+        entry = models.setdefault(model, {})
+        if not isinstance(entry, dict):
+            entry = {}
+            models[model] = entry
+        params = entry.setdefault("params", {})
+        if not isinstance(params, dict):
+            params = {}
+            entry["params"] = params
+        changed = False
+        if defaults.get("systemPromptOverride") != OPENCLAW_EVAL_SYSTEM_PROMPT:
+            defaults["systemPromptOverride"] = OPENCLAW_EVAL_SYSTEM_PROMPT
+            changed = True
+        if params.get("fastMode") is not True:
+            params["fastMode"] = True
+            changed = True
+        if model.startswith("openai/"):
+            if params.get("transport") != "sse":
+                params["transport"] = "sse"
+                changed = True
+            if params.get("openaiWsWarmup") is not False:
+                params["openaiWsWarmup"] = False
+                changed = True
+        return changed
 
     def _find_gateway_cmd(self) -> list[str] | None:
         import shutil

@@ -20,6 +20,7 @@ def test_submission_request_defaults_to_single_parallel_lane():
     assert request.max_parallel_lanes == 1
     assert request.runs_per_task == 3
     assert request.judge_affects_score is False
+    assert request.task_ids == []
 
 
 def test_submission_request_fingerprint_includes_judge_score_gate():
@@ -31,6 +32,16 @@ def test_submission_request_fingerprint_includes_judge_score_gate():
     )
 
     assert advisory.active_fingerprint() != weighted.active_fingerprint()
+
+
+def test_submission_request_fingerprint_includes_task_ids():
+    all_tasks = SubmissionRequest(model="anthropic/claude-sonnet-4-6")
+    subset = SubmissionRequest(
+        model="anthropic/claude-sonnet-4-6",
+        task_ids=["t1-fs-quick-note"],
+    )
+
+    assert all_tasks.active_fingerprint() != subset.active_fingerprint()
 
 
 def test_save_local_replaces_queue_file_atomically(tmp_path, monkeypatch):

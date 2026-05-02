@@ -6,7 +6,14 @@ from types import SimpleNamespace
 import pytest
 
 from clawbench.queue import Job, JobQueue, JobStatus, SubmissionRequest
-from clawbench.worker import GATEWAY_PORT, GATEWAY_PORT_SPACING, EvalWorker, JobProgressTracker, ParallelLane
+from clawbench.worker import (
+    GATEWAY_PORT,
+    GATEWAY_PORT_SPACING,
+    OPENCLAW_EVAL_SYSTEM_PROMPT,
+    EvalWorker,
+    JobProgressTracker,
+    ParallelLane,
+)
 
 
 class DummyTask:
@@ -119,12 +126,27 @@ def test_configure_browser_runtime_pins_subagents_to_active_model(monkeypatch):
             "defaults": {
                 "skipBootstrap": True,
                 "model": {"primary": "openai-codex/gpt-5.4"},
+                "models": {"openai-codex/gpt-5.4": {"params": {"fastMode": True}}},
+                "systemPromptOverride": OPENCLAW_EVAL_SYSTEM_PROMPT,
                 "subagents": {"model": {"primary": "openai-codex/gpt-5.4"}},
             }
         },
         "browser": {"headless": True, "noSandbox": True},
         "tools": {"exec": {"host": "gateway", "security": "full", "ask": "off"}},
         "approvals": {"exec": {"enabled": False}},
+    }
+
+
+def test_eval_model_defaults_pin_openai_to_sse_transport() -> None:
+    data: dict[str, object] = {}
+
+    changed = EvalWorker._apply_eval_model_defaults(data, "openai/gpt-5.5")
+
+    assert changed is True
+    assert data["agents"]["defaults"]["models"]["openai/gpt-5.5"]["params"] == {
+        "fastMode": True,
+        "transport": "sse",
+        "openaiWsWarmup": False,
     }
 
 

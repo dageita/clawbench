@@ -131,10 +131,26 @@ set_nested(data, "agents.defaults.skipBootstrap", True)
 set_nested(data, "agents.defaults.sandbox.mode", "off")
 set_nested(data, "agents.defaults.model.primary", os.environ["SWEEP_MODEL"])
 set_nested(data, "agents.defaults.subagents.model.primary", os.environ["SWEEP_MODEL"])
+set_nested(
+    data,
+    "agents.defaults.systemPromptOverride",
+    "You are running an OpenClaw benchmark task. Complete the user's request in the current "
+    "workspace using the available tools when needed. For file, code, browser, shell, or memory "
+    "tasks, make the requested changes directly and verify them when practical. Do not ask "
+    "follow-up questions during the benchmark. Keep any final reply brief.",
+)
 set_nested(data, "tools.exec.host", os.environ.get("OPENCLAW_EXEC_HOST", "gateway"))
 set_nested(data, "tools.exec.security", "full")
 set_nested(data, "tools.exec.ask", "off")
 set_nested(data, "approvals.exec.enabled", False)
+
+models = data.setdefault("agents", {}).setdefault("defaults", {}).setdefault("models", {})
+model_entry = models.setdefault(os.environ["SWEEP_MODEL"], {})
+params = model_entry.setdefault("params", {})
+params["fastMode"] = True
+if os.environ["SWEEP_MODEL"].startswith("openai/"):
+    params["transport"] = "sse"
+    params["openaiWsWarmup"] = False
 
 cfg_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 

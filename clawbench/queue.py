@@ -50,6 +50,7 @@ class SubmissionRequest(BaseModel):
     runs_per_task: int = Field(default=3, ge=1, le=10)
     max_parallel_lanes: int = Field(default=1, ge=1, le=8)
     tier: str | None = None  # Filter to a specific tier
+    task_ids: list[str] = Field(default_factory=list)
     scenario: str | None = None
     prompt_variant: str = "clear"
     submitter: str = ""  # HF username
@@ -65,6 +66,7 @@ class SubmissionRequest(BaseModel):
             "runs_per_task": self.runs_per_task,
             "max_parallel_lanes": self.max_parallel_lanes,
             "tier": self.tier or "",
+            "task_ids": [task_id.strip() for task_id in self.task_ids if task_id.strip()],
             "scenario": self.scenario or "",
             "prompt_variant": self.prompt_variant,
         }
