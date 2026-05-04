@@ -23,6 +23,12 @@ def test_submission_request_defaults_to_single_parallel_lane():
     assert request.task_ids == []
 
 
+def test_local_queue_dir_honors_env_override(tmp_path, monkeypatch):
+    monkeypatch.setenv("CLAWBENCH_LOCAL_QUEUE_DIR", str(tmp_path / "queue"))
+
+    assert queue_module._resolve_local_queue_dir() == tmp_path / "queue"
+
+
 def test_submission_request_fingerprint_includes_judge_score_gate():
     advisory = SubmissionRequest(model="anthropic/claude-sonnet-4-6", judge_model="judge")
     weighted = SubmissionRequest(
@@ -42,6 +48,19 @@ def test_submission_request_fingerprint_includes_task_ids():
     )
 
     assert all_tasks.active_fingerprint() != subset.active_fingerprint()
+
+
+def test_submission_request_fingerprint_canonicalizes_task_ids():
+    first = SubmissionRequest(
+        model="anthropic/claude-sonnet-4-6",
+        task_ids=[" t2-demo ", "t1-demo", "t2-demo"],
+    )
+    second = SubmissionRequest(
+        model="anthropic/claude-sonnet-4-6",
+        task_ids=["t1-demo", "t2-demo"],
+    )
+
+    assert first.active_fingerprint() == second.active_fingerprint()
 
 
 def test_save_local_replaces_queue_file_atomically(tmp_path, monkeypatch):

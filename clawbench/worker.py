@@ -1090,12 +1090,13 @@ class EvalWorker:
                 ]
             )
         try:
-            self._patch_openclaw_config(config_pairs)
             state_dir = Path(
                 gateway_env.get("OPENCLAW_STATE_DIR")
                 or os.environ.get("OPENCLAW_STATE_DIR")
                 or os.path.expanduser("~/.openclaw")
             )
+            config_path = Path(gateway_env.get("OPENCLAW_CONFIG_PATH") or (state_dir / "openclaw.json"))
+            self._patch_openclaw_config(config_pairs, config_path=config_path)
             self._write_eval_exec_approvals(state_dir)
         except Exception as exc:
             logger.warning("Direct openclaw.json patch failed: %s", exc)
@@ -1135,9 +1136,15 @@ class EvalWorker:
         tmp_path.write_text(json.dumps(approvals, indent=2), encoding="utf-8")
         tmp_path.replace(approvals_path)
 
-    def _patch_openclaw_config(self, pairs: list[tuple[str, object]]) -> None:
-        state_dir = Path(os.environ.get("OPENCLAW_STATE_DIR") or os.path.expanduser("~/.openclaw"))
-        config_path = state_dir / "openclaw.json"
+    def _patch_openclaw_config(
+        self,
+        pairs: list[tuple[str, object]],
+        *,
+        config_path: Path | None = None,
+    ) -> None:
+        if config_path is None:
+            state_dir = Path(os.environ.get("OPENCLAW_STATE_DIR") or os.path.expanduser("~/.openclaw"))
+            config_path = state_dir / "openclaw.json"
         if not config_path.exists():
             logger.warning("openclaw.json not found at %s; skipping direct patch", config_path)
             return

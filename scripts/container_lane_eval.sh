@@ -167,11 +167,6 @@ approvals = {
 approvals_path.write_text(json.dumps(approvals, indent=2) + "\n", encoding="utf-8")
 PY
 
-if [ "${CLAWBENCH_ENABLE_GBRAIN:-0}" = "1" ]; then
-  export CLAWBENCH_LANE_PREPARE_CMD="${CLAWBENCH_LANE_PREPARE_CMD:-/home/node/app/scripts/setup_gbrain_runtime.sh}"
-  "$CLAWBENCH_LANE_PREPARE_CMD"
-fi
-
 echo "===== CONTAINER LANE EVAL START $(date '+%Y-%m-%d %H:%M:%S') ====="
 echo "label:    $SWEEP_LABEL"
 echo "model:    $SWEEP_MODEL"

@@ -137,6 +137,35 @@ def test_configure_browser_runtime_pins_subagents_to_active_model(monkeypatch):
     }
 
 
+def test_configure_browser_runtime_uses_gateway_env_config_path(tmp_path: Path, monkeypatch):
+    worker = EvalWorker(JobQueue())
+    worker.set_active_model("openai-codex/gpt-5.4")
+    parent_state = tmp_path / "parent"
+    lane_state = tmp_path / "lane"
+    parent_state.mkdir()
+    lane_state.mkdir()
+    parent_config = parent_state / "openclaw.json"
+    lane_config = lane_state / "openclaw.json"
+    parent_config.write_text("{}", encoding="utf-8")
+    lane_config.write_text("{}", encoding="utf-8")
+    monkeypatch.setenv("OPENCLAW_STATE_DIR", str(parent_state))
+
+    worker._configure_browser_runtime(
+        ["node", "/openclaw/dist/cli.js"],
+        {
+            "OPENCLAW_STATE_DIR": str(lane_state),
+            "OPENCLAW_CONFIG_PATH": str(lane_config),
+        },
+    )
+
+    assert json.loads(parent_config.read_text(encoding="utf-8")) == {}
+    lane_data = json.loads(lane_config.read_text(encoding="utf-8"))
+    assert lane_data["agents"]["defaults"]["model"]["primary"] == "openai-codex/gpt-5.4"
+    assert lane_data["tools"]["exec"] == {"host": "gateway", "security": "full", "ask": "off"}
+    assert (lane_state / "exec-approvals.json").exists()
+    assert not (parent_state / "exec-approvals.json").exists()
+
+
 def test_eval_model_defaults_pin_openai_to_sse_transport() -> None:
     data: dict[str, object] = {}
 
