@@ -1,3 +1,5 @@
+![ClawBench banner](docs/assets/readme-banner.jpg)
+
 ---
 title: ClawBench
 emoji: 🦞
