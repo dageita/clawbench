@@ -1,5 +1,3 @@
-![ClawBench banner](docs/assets/readme-banner.jpg)
-
 ---
 title: ClawBench
 emoji: 🦞
@@ -24,6 +22,8 @@ license: mit
 [![HF Dataset](https://img.shields.io/badge/HF-dataset-yellow.svg?style=flat-square)](https://huggingface.co/datasets/openclaw/clawbench-results)
 
 </div>
+
+![ClawBench banner](docs/assets/readme-banner.jpg)
 
 ---
 
