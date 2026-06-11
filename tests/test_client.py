@@ -176,6 +176,54 @@ def test_parser_accepts_codex_tool_search_output_shape():
     assert transcript.tool_call_sequence[1].success is True
 
 
+def test_parser_accepts_kebab_case_codex_tool_search_blocks():
+    tool_message = _parse_single_message(
+        {
+            "role": "assistant",
+            "content": [
+                {
+                    "type": "tool-search-call",
+                    "call_id": "search-2",
+                    "title": "tool_search",
+                    "parameters": {"query": "calendar"},
+                },
+                {
+                    "type": "tool-call",
+                    "tool_call_id": "call-2",
+                    "tool": "message",
+                    "args": {"text": "ok"},
+                },
+            ],
+        }
+    )
+    result_message = _parse_single_message(
+        {
+            "role": "tool",
+            "content": [
+                {
+                    "type": "tool-search-output",
+                    "call_id": "search-2",
+                    "content": [{"content": "message: available"}],
+                },
+                {
+                    "type": "tool-call-output",
+                    "tool_call_id": "call-2",
+                    "text": "delivered",
+                },
+            ],
+        }
+    )
+
+    transcript = _correlate_transcript(Transcript(messages=[tool_message, result_message]))  # type: ignore[arg-type]
+
+    assert [call.id for call in transcript.tool_call_sequence] == ["search-2", "call-2"]
+    assert [call.name for call in transcript.tool_call_sequence] == ["tool_search", "message"]
+    assert transcript.tool_call_sequence[0].input == {"query": "calendar"}
+    assert transcript.tool_call_sequence[0].output == "message: available"
+    assert transcript.tool_call_sequence[1].input == {"text": "ok"}
+    assert transcript.tool_call_sequence[1].output == "delivered"
+
+
 def test_parser_correlates_plain_top_level_tool_result_message():
     tool_message = _parse_single_message(
         {
