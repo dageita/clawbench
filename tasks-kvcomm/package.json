@@ -1,0 +1,17 @@
+{
+  "name": "@clawbench/tasks-kvcomm",
+  "private": true,
+  "type": "module",
+  "description": "ClawBench multi-agent Chain + TTFT benchmark lane (KVCOMM-aligned)",
+  "scripts": {
+    "run": "node drivers/run-chain.mjs",
+    "dry-run": "node drivers/run-chain.mjs --dry-run",
+    "verify-dataset": "node drivers/run-chain.mjs --dry-run --task-id micro-001 --agent-count 3"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -14,7 +14,7 @@ dependencies = [
     "pillow>=12.2.0,<13",
     "httpx>=0.27,<1",
     "numpy>=1.26,<3",
-    "rich>=13.0,<14",
+    "rich>=13.0,<15",
     "click>=8.1,<9",
     # Runtime deps for the task completion verifier. The harness shells out
     # to `pytest -q` / `pytest-asyncio` inside per-task workspaces as the
@@ -54,7 +54,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["clawbench"]
-force-include = { "tasks-public" = "tasks-public", "tasks-domain" = "tasks-domain", "profiles" = "profiles", "baselines" = "baselines", "CLAWBENCH_V0_4_SPEC.md" = "CLAWBENCH_V0_4_SPEC.md", "PARTNER_TRACE_SPEC.md" = "PARTNER_TRACE_SPEC.md" }
+force-include = { "tasks-public" = "tasks-public", "tasks-domain" = "tasks-domain", "tasks-kvcomm" = "tasks-kvcomm", "profiles" = "profiles", "baselines" = "baselines", "CLAWBENCH_V0_4_SPEC.md" = "CLAWBENCH_V0_4_SPEC.md", "PARTNER_TRACE_SPEC.md" = "PARTNER_TRACE_SPEC.md" }
 
 [tool.hatch.metadata]
 allow-direct-references = true

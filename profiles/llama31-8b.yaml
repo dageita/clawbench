@@ -1,0 +1,18 @@
+# Deprecated: use profiles/qwen3-32b.yaml (local vLLM default is Qwen3-32B).
+# Kept as alias for older docs/scripts referencing llama31-8b.
+
+profile:
+  name: qwen3-32b-local-vllm
+  base_model: vllm/Qwen3-32B
+  notes: |
+    Alias profile — prefer profiles/qwen3-32b.yaml.
+    Local Qwen3-32B via vLLM; apply: bash scripts/setup_vllm_clawbench.sh
+  plugins:
+    enabled:
+      - ollama
+    tools_allow:
+      - read
+      - write
+      - edit
+      - exec
+      - session_status

@@ -8,5 +8,6 @@ def test_wheel_includes_runtime_data_directories():
 
     assert force_include["tasks-public"] == "tasks-public"
     assert force_include["tasks-domain"] == "tasks-domain"
+    assert force_include["tasks-kvcomm"] == "tasks-kvcomm"
     assert force_include["profiles"] == "profiles"
     assert force_include["baselines"] == "baselines"

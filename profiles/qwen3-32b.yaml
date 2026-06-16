@@ -1,0 +1,19 @@
+# ClawBench plugin profile metadata (NOT OpenClaw models.providers config).
+# For vLLM model wiring, use config/openclaw.clawbench.vllm.json and
+# scripts/setup_vllm_clawbench.sh instead of editing this file.
+
+profile:
+  name: qwen3-32b-local-vllm
+  base_model: vllm/Qwen3-32B
+  notes: |
+    Local Qwen3-32B via vLLM for ClawBench smoke tests.
+    Apply OpenClaw config: bash scripts/setup_vllm_clawbench.sh
+  plugins:
+    enabled:
+      - ollama
+    tools_allow:
+      - read
+      - write
+      - edit
+      - exec
+      - session_status

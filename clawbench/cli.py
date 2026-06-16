@@ -720,6 +720,206 @@ def promote_templates(
         click.echo("Active hidden release manifest updated.")
 
 
+@cli.group()
+def kvcomm() -> None:
+    """Multi-agent Chain + per-agent TTFT benchmark (KVCOMM-aligned lane)."""
+
+
+@kvcomm.command("run")
+@click.option("--model", "-m", default="", help="OpenClaw provider/model for subagent spawns")
+@click.option("--runs", "-n", default=1, show_default=True, help="Measured repetitions per task")
+@click.option("--warmup-runs", default=0, show_default=True, help="Warmup runs excluded from TTFT summary")
+@click.option("--agent-count", default=3, show_default=True, type=int, help="Chain agent count")
+@click.option("--topology", default="chain", show_default=True, type=click.Choice(["chain"]))
+@click.option("--task-id", default="", help="Single task from tasks-kvcomm/datasets/tier0_copy.jsonl")
+@click.option("--output", "-o", default="", help="Result basename or .jsonl path")
+@click.option(
+    "--output-dir",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Results directory (default: tasks-kvcomm/results)",
+)
+@click.option("--experiment-id", default="kvcomm-openclaw", show_default=True)
+@click.option("--agent-id", default="main", show_default=True, help="Orchestrator OpenClaw agent id")
+@click.option(
+    "--inference-mode",
+    default="dense_prefill",
+    show_default=True,
+    type=click.Choice(["dense_prefill", "kv_reuse"]),
+    help="Inference mode label (kv_reuse for future sidecar)",
+)
+@click.option(
+    "--inference-backend",
+    default="vllm_direct",
+    show_default=True,
+    type=click.Choice(["vllm_direct", "kvcomm_sidecar"]),
+)
+@click.option("--scenario", type=click.Path(exists=True, path_type=Path), default=None)
+@click.option("--dataset", type=click.Path(exists=True, path_type=Path), default=None)
+@click.option("--dry-run", is_flag=True, help="Validate scenario/dataset only (no Gateway)")
+@click.option("--gateway-token", envvar="OPENCLAW_GATEWAY_TOKEN", default="", help="Gateway auth token")
+def kvcomm_run(
+    model: str,
+    runs: int,
+    warmup_runs: int,
+    agent_count: int,
+    topology: str,
+    task_id: str,
+    output: str,
+    output_dir: Path | None,
+    experiment_id: str,
+    agent_id: str,
+    inference_mode: str,
+    inference_backend: str,
+    scenario: Path | None,
+    dataset: Path | None,
+    dry_run: bool,
+    gateway_token: str,
+) -> None:
+    """Run OpenClaw multi-agent Chain benchmark with per-agent TTFT."""
+    from clawbench.kvcomm_runner import run_kvcomm_bench
+
+    code, jsonl_path, summary_path = run_kvcomm_bench(
+        model=model,
+        runs=runs,
+        warmup_runs=warmup_runs,
+        agent_count=agent_count,
+        topology=topology,
+        task_id=task_id or None,
+        output=output or None,
+        output_dir=str(output_dir) if output_dir else None,
+        experiment_id=experiment_id,
+        agent_id=agent_id,
+        inference_mode=inference_mode,
+        inference_backend=inference_backend,
+        dry_run=dry_run,
+        scenario=str(scenario) if scenario else None,
+        dataset=str(dataset) if dataset else None,
+        gateway_token=gateway_token,
+    )
+    if code != 0:
+        raise SystemExit(code)
+    if dry_run:
+        click.echo("kvcomm dry-run OK")
+        return
+    if jsonl_path:
+        click.echo(f"Results: {jsonl_path}")
+    if summary_path and summary_path.is_file():
+        click.echo(f"Summary: {summary_path}")
+
+
+@kvcomm.command("run-clawbench")
+@click.option("--model", "-m", default="", help="OpenClaw provider/model for subagent spawns")
+@click.option("--runs", "-n", default=1, show_default=True, help="Measured repetitions per task")
+@click.option("--warmup-runs", default=0, show_default=True, help="Warmup runs excluded from TTFT summary")
+@click.option("--agent-count", default=3, show_default=True, type=int, help="Chain agent count")
+@click.option(
+    "--task-id",
+    default="t1-fs-quick-note",
+    show_default=True,
+    help="ClawBench task from tier1_clawbench.jsonl",
+)
+@click.option("--output", "-o", default="", help="Result basename or .jsonl path")
+@click.option(
+    "--output-dir",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Results directory (default: tasks-kvcomm/results)",
+)
+@click.option("--experiment-id", default="clawbench-chain", show_default=True)
+@click.option("--agent-id", default="main", show_default=True, help="Orchestrator OpenClaw agent id")
+@click.option(
+    "--inference-mode",
+    default="dense_prefill",
+    show_default=True,
+    type=click.Choice(["dense_prefill", "kv_reuse"]),
+)
+@click.option(
+    "--inference-backend",
+    default="vllm_direct",
+    show_default=True,
+    type=click.Choice(["vllm_direct", "kvcomm_sidecar"]),
+)
+@click.option("--scenario", type=click.Path(exists=True, path_type=Path), default=None)
+@click.option(
+    "--dataset",
+    type=click.Path(exists=True, path_type=Path),
+    default=None,
+    help="Default: KVCOMM/experiments/bench/datasets/tier1_clawbench.jsonl",
+)
+@click.option("--judge-model", default="", help="Optional judge model for ClawBench scoring")
+@click.option("--skip-score", is_flag=True, help="Skip ClawBench completion/trajectory scoring")
+@click.option("--dry-run", is_flag=True, help="Validate scenario/dataset only (no Gateway)")
+@click.option("--gateway-token", envvar="OPENCLAW_GATEWAY_TOKEN", default="", help="Gateway auth token")
+def kvcomm_run_clawbench(
+    model: str,
+    runs: int,
+    warmup_runs: int,
+    agent_count: int,
+    task_id: str,
+    output: str,
+    output_dir: Path | None,
+    experiment_id: str,
+    agent_id: str,
+    inference_mode: str,
+    inference_backend: str,
+    scenario: Path | None,
+    dataset: Path | None,
+    judge_model: str,
+    skip_score: bool,
+    dry_run: bool,
+    gateway_token: str,
+) -> None:
+    """Run Chain 3-agent + ClawBench native task with capability scoring."""
+    from clawbench.kvcomm_runner import run_kvcomm_clawbench
+
+    code, jsonl_path, summary_path = run_kvcomm_clawbench(
+        model=model,
+        runs=runs,
+        warmup_runs=warmup_runs,
+        agent_count=agent_count,
+        task_id=task_id or None,
+        output=output or None,
+        output_dir=str(output_dir) if output_dir else None,
+        experiment_id=experiment_id,
+        agent_id=agent_id,
+        inference_mode=inference_mode,
+        inference_backend=inference_backend,
+        dry_run=dry_run,
+        scenario=str(scenario) if scenario else None,
+        dataset=str(dataset) if dataset else None,
+        gateway_token=gateway_token,
+        judge_model=judge_model,
+        skip_score=skip_score,
+    )
+    if code != 0:
+        raise SystemExit(code)
+    if dry_run:
+        click.echo("kvcomm run-clawbench dry-run OK")
+        return
+    if jsonl_path:
+        click.echo(f"Results: {jsonl_path}")
+    if summary_path and summary_path.is_file():
+        click.echo(f"Summary: {summary_path}")
+
+
+@kvcomm.command("dry-run")
+@click.option("--agent-count", default=3, show_default=True, type=int)
+@click.option("--task-id", default="micro-001", show_default=True)
+def kvcomm_dry_run(agent_count: int, task_id: str) -> None:
+    """Validate tasks-kvcomm scenario rendering without Gateway."""
+    from clawbench.kvcomm_runner import run_kvcomm_bench
+
+    code, _, _ = run_kvcomm_bench(
+        dry_run=True,
+        agent_count=agent_count,
+        task_id=task_id,
+    )
+    if code != 0:
+        raise SystemExit(code)
+    click.echo("kvcomm dry-run OK")
+
+
 @cli.command()
 @click.option("--tasks-dir", type=click.Path(exists=True), help="Custom tasks directory")
 @click.option("--scenario", type=click.Choice(SCENARIO_CHOICES), help="Filter query scenario")
