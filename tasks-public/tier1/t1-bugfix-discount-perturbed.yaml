@@ -14,7 +14,7 @@ setup:
 user:
   max_turns: 2
   turns:
-    - message: "Please resolve the bug related to discounts in the workspace Python files. Ensure that percentage-based discounts are calculated correctly when there are multiple items in the cart, and then verify that all tests pass successfully."
+    - message: "Please resolve the discount bug in pricing.py at the workspace root (cart.py is read-only; tests live in tests/test_pricing.py). Ensure percentage-based discounts are calculated correctly when there are multiple items in the cart, then verify all tests pass with pytest -q."
 
 completion:
   execution_checks:

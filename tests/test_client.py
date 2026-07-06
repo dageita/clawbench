@@ -9,7 +9,7 @@ from websockets.datastructures import Headers
 from websockets.exceptions import InvalidMessage, InvalidStatus
 from websockets.http11 import Response
 
-from clawbench.client import GatewayClient, GatewayConfig, _correlate_transcript, _parse_single_message
+from clawbench.client import GatewayClient, GatewayConfig, _correlate_transcript, _parse_single_message, resolve_gateway_token
 from clawbench.schemas import EfficiencyResult, TokenUsage, Transcript
 
 
@@ -20,6 +20,21 @@ def test_gateway_config_defaults():
     # spurious empty_response failures.
     assert cfg.connect_timeout == 30.0
     assert cfg.request_timeout == 60.0
+
+
+def test_resolve_gateway_token_from_openclaw_json(tmp_path: Path, monkeypatch):
+    state_dir = tmp_path / "state"
+    state_dir.mkdir()
+    token = "bench-token-from-config"
+    (state_dir / "openclaw.json").write_text(
+        json.dumps({"gateway": {"auth": {"token": token}}}),
+        encoding="utf-8",
+    )
+    monkeypatch.delenv("OPENCLAW_GATEWAY_TOKEN", raising=False)
+    monkeypatch.setenv("OPENCLAW_STATE_DIR", str(state_dir))
+
+    assert resolve_gateway_token("") == token
+    assert GatewayConfig().token == token
 
 
 def test_set_session_auth_profile_override_patches_local_store(tmp_path: Path, monkeypatch):

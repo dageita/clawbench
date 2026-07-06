@@ -28,6 +28,27 @@ logger = logging.getLogger(__name__)
 
 MIN_PROTOCOL_VERSION = 3
 MAX_PROTOCOL_VERSION = 4
+
+
+def resolve_gateway_token(explicit: str = "") -> str:
+    """Resolve Gateway auth token: explicit/env first, then ~/.openclaw/openclaw.json."""
+    token = (explicit or os.environ.get("OPENCLAW_GATEWAY_TOKEN", "")).strip()
+    if token:
+        return token
+
+    state_dir = Path(os.environ.get("OPENCLAW_STATE_DIR", Path.home() / ".openclaw"))
+    cfg_path = state_dir / "openclaw.json"
+    if not cfg_path.is_file():
+        return ""
+
+    try:
+        data = json.loads(cfg_path.read_text(encoding="utf-8"))
+        raw = data.get("gateway", {}).get("auth", {}).get("token", "")
+        if isinstance(raw, str):
+            return raw.strip()
+    except (OSError, json.JSONDecodeError, AttributeError, TypeError):
+        pass
+    return ""
 DEVICE_IDENTITY_HELPER_JS = r"""
 const crypto = require("crypto");
 const fs = require("fs");
@@ -202,6 +223,12 @@ class GatewayConfig:
     request_timeout: float = field(
         default_factory=lambda: _env_float("CLAWBENCH_REQUEST_TIMEOUT", 60.0)
     )
+
+    def __post_init__(self) -> None:
+        if not self.token.strip():
+            self.token = resolve_gateway_token("")
+        else:
+            self.token = self.token.strip()
 
 
 class GatewayClient:
